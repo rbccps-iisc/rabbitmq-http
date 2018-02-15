@@ -10,12 +10,10 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"time"
 )
 
 var (
-	address = flag.String("address", "10.156.14.6:8989", "bind host:port")
-	amqpUri = flag.String("amqp", "amqp://rbccps:rbccps@123@10.156.14.6:5672/", "amqp uri")
+	address = flag.String("address", "0.0.0.0:8080", "bind host:port")
 )
 
 var request *http.Request
@@ -64,7 +62,7 @@ type RabbitMQ struct {
 }
 
 func (r *RabbitMQ) Connect() (err error) {
-	r.conn, err = amqp.Dial(*amqpUri)
+	r.conn, err = amqp.Dial("amqp://" + request.Header.Get("X-Consumer-Username") + ":" + request.Header.Get("Apikey") + "@localhost:5672/")
 	if err != nil {
 		log.Printf(request.Header.Get("X-Real-Ip")+" "+request.Header.Get("X-Consumer-Id")+" "+request.Header.Get("X-Consumer-Username")+" "+request.Header.Get("Apikey")+" [amqp] connect error: %s\n", err)
 		return err
@@ -366,8 +364,7 @@ func PublishHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func ExchangeHandler(w http.ResponseWriter, r *http.Request) {
-
-	request=r
+request=r
 	if r.Method == "POST" || r.Method == "DELETE" {
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -414,7 +411,7 @@ func main() {
 	http.HandleFunc("/publish", PublishHandler)
 
 	// Start HTTP Server
-	log.Printf("server run %s (listen %s)\n", *address, *amqpUri)
+	log.Printf("server run %s (listen)\n", *address)
 	err := http.ListenAndServe(*address, nil)
 	if err != nil {
 		log.Fatal(err)
